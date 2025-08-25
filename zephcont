@@ -1,0 +1,46 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+# Configuration
+my $email     = 'agustin.harfuca@gmail.com';
+my $name      = 'Agustin Harfuch Cardenas';
+my $key_path  = "$ENV{HOME}/.ssh/github";
+my $repo_url  = 'git@github.com:harfuchcardenas/humidity-control.git';
+my $ssh_config = "$ENV{HOME}/.ssh";
+
+# Step 1: Generate SSH key
+print "🔧 Generating SSH key...\n";
+system("ssh-keygen -t ed25519 -C \"$email\" -f \"$key_path\" -N \"\"") == 0
+    or die "Failed to generate SSH key\n";
+
+# Step 2: Start SSH agent and add key
+print "🚀 Starting SSH agent and adding key...\nPress enter\n";
+<STDIN>;
+system("eval \"\$(ssh-agent -s)\"") == 0
+    or warn "Failed to start ssh-agent\n";
+<STDIN>;
+system("ssh-add $key_path") == 0
+    or die "Failed to add SSH key\n";
+
+# Step 3: Show public key
+print "\n🔑 Copy this SSH public key and add it to GitHub:\n";
+system("cat \"$key_path.pub\"");
+
+# Step 4: Configure Git
+print "\n🛠️ Configuring Git...\n";
+system("git config --global user.name \"$name\"") == 0
+    or warn "Failed to set Git user.name\n";
+system("git config --global user.email \"$email\"") == 0
+    or warn "Failed to set Git user.email\n";
+
+# Step 5: Add SSH config
+print "\n📁 Updating SSH config...\n";
+open(my $fh, '>>', $ssh_config) or die "Cannot open SSH config file: $!";
+print $fh "\nHost github.com\n  HostName github.com\n  User git\n  IdentityFile $key_path\n";
+close($fh);
+
+# Step 6: Final instructions
+print "\n✅ SSH setup complete.\n";
+print "👉 Once you've added the key to GitHub, hit enter to clone the repository:\n";
+system("git clone $repo_url\n");
