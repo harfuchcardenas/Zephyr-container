@@ -4,10 +4,9 @@ FROM ubuntu:22.04
 # Avoid interactive prompts during build
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
-    apt-get install -y python3 python3-venv python3-pip git cmake ninja-build gperf curl #&& pip3 install west apt
+    apt-get install -y python3 python3-venv python3-pip git cmake ninja-build gperf curl 
+RUN pip3 install west apt
 RUN exit 0;
-
-RUN perl -e 'print "Enter your name: "; $name = <STDIN>; chomp($name); print "Hello, $name!\n";'
 
 # Install Zephyr (example)
 #RUN python3 -m venv ~/zephyrproject/.venv && west init zephyrproject && \

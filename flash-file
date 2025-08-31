@@ -1,0 +1,88 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use Cwd;
+
+my $response;
+my $current_dir = cwd(); # Get current working directory
+$current_dir .= "/zephyrproject";
+
+# Start navigation from 'zephyrproject'
+chdir("zephyrproject") or die "Failed to enter 'zephyrproject': $!\n";
+
+# Ask weather the user would like flash the application or not and
+# reactivate virtual environment approriately.
+
+while (1) {
+    print "Would you like to flash the current application to the specified board? (yes/no): ";
+    chomp($response = <STDIN>);
+    $response = lc($response);  # Normalize to lowercase
+
+    if ($response eq 'yes') {
+        print "Checking if nrfutil is currently installed\n";
+        
+        # Try to locate nrfutil using `which`
+        my $nrfutil_path = `which nrfutil`;
+        chomp($nrfutil_path);
+
+        if ($nrfutil_path) {
+            print "✅ nrfutil is installed at: $nrfutil_path\n";
+            print "Flashing the application...\n";
+            system("bash -c '
+            source $current_dir/.venv/bin/activate && cd $current_dir &&
+            west flash --build-dir zephyr/build/ && deactivate'") == 0
+            or die "Failed to flash the board: $!";
+            print "Flash successful!\n";
+            last;
+        } else {
+            print "❌ nrfutil is NOT installed or not in your PATH.\n";
+            print "Do you want to install nrfutil? (yes/no): ";
+            chomp(my $answer = <STDIN>);
+            if ($answer =~ /^yes$/i) {
+                print "Great! Downloading nrfutil...\n";
+                my $curl_path = `which curl`;
+                chomp($curl_path);
+                if ($curl_path) {
+                    print "✅ curl is already installed at: $curl_path\n";
+                } else {
+                    print "❌ curl is not installed. Installing now...\n";
+                    # Update package list and install curl
+                    system("sudo apt update");
+                    system("sudo apt install -y curl");
+                    # Verify installation
+                    $curl_path = `which curl`;
+                    chomp($curl_path);
+                    if ($curl_path) {
+                        print "✅ curl has been successfully installed at: $curl_path\n";
+                    } else {
+                        print "❌ Failed to install curl. Please check your system settings.\n";
+                        exit 1;
+                    }
+                }
+                system('curl https://files.nordicsemi.com/artifactory/swtools/external/nrfutil/executables/x86_64-unknown-linux-gnu/nrfutil -o nrfutil');
+		
+		print "✅ nrfutil should now be installed!\n";
+                print "Flashing the application...\n";
+                system("bash -c '
+                source $current_dir/.venv/bin/activate && cd $current_dir &&
+	        west flash --build-dir zephyr/build/ && deactivate'") == 0
+			or die "Failed to flash the board: $!";
+            	print "Flash successful!\n";
+		last;
+            } elsif ($answer =~ /^no$/i) {
+                print "Okay, skipping installation. Re-run script if you change your mind.\n";
+                exit 0;
+            } else {
+                    print "❗ Invalid response. Please type 'yes' or 'no'.\n";
+                }
+            }
+        } elsif ($response eq 'no') {
+	    print "Flash operation skipped.\n";
+	    last;
+        } elsif ($response eq 'y') {
+	    print "Please type the full word 'yes' or 'no'.\n";
+        } else {
+            print "Invalid input. Please respond with 'yes' or 'no'.\n";
+        }
+    }

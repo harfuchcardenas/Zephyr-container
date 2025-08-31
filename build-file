@@ -1,0 +1,120 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use Cwd;
+
+# Function to navigate directories interactively
+my $build_base = cwd();  # Get current working directory
+sub navigate_directory {
+    my $current_dir = cwd();  # Get current working directory
+    print "\nCurrent Directory: $current_dir\n";
+
+    # Open and get subdirectories
+    opendir(my $dh, $current_dir) or die "Cannot open directory: $!\n";
+    my @subdirs = sort grep { -d "$current_dir/$_" && !/^\./ } readdir($dh);
+    closedir($dh);
+
+    # If no subdirectories exist, return current directory
+    unless (@subdirs) {
+        print "No subdirectories found. Storing this directory...\n";
+        return $current_dir;
+    }
+
+    # List subdirectories for selection
+    print "You're building Zephyr OS, and you need to choose a source directory, select a subdirectory:\n";
+    for (my $i = 0; $i < @subdirs; $i++) {
+        print "$i: $subdirs[$i]\n";
+    }
+
+    # User input selection
+    print "Select a subdirectory by number, press Enter to confirm, Press B to go back one level or simply E to exit: ";
+    my $choice = <STDIN>;
+    chomp($choice);
+
+    # If user presses Enter, store current directory
+    if ($choice eq '') {
+        print "\nSelected source path: $current_dir\n";
+	return $current_dir;
+    }elsif ($choice =~ /^\d+$/ && $choice >= 0 && $choice < @subdirs) {
+        my $selected_dir = $subdirs[$choice];
+        chdir("$current_dir/$selected_dir") or die "Failed to enter '$selected_dir': $!\n";
+        return navigate_directory();  # Recursively call function
+    } elsif($choice =~ /^e$/i) {
+        exit 0;
+    }elsif ($choice =~ /^b$/i) {
+        chdir("..") or die "Failed to climb a level up$!\n";
+        return navigate_directory();  # Retry selection
+    }else {
+        print "Invalid selection. Try again!\n";
+        return navigate_directory();  # Retry selection
+    }
+}
+
+# Install git
+if (system("command -v git > /dev/null") != 0) {
+    print "Git is not installed. Installing now...\n";
+    system("sudo apt update && sudo apt install -y git") == 0
+        or die "Falied to install Git!\n";
+} else {
+    print "Git is already installed!\n";
+}
+
+#Install required Dependencies
+system("echo To install dependencies\n");
+system("sudo apt install --no-install-recommends git cmake ninja-build gperf ccache dfu-util device-tree-compiler wget python3-dev python3-pip python3-setuptools python3-tk python3-wheel xz-utils file make gcc gcc-multilib g++-multilib libsdl2-dev libmagic1");
+
+# Track missing packages
+my @missing;
+my $target_dir = cwd();  # Get current working directory
+$target_dir .= "/zephyrproject";
+
+print "TARGET: $target_dir\n";
+# Check if `zephyrproject` exists inside the given directory
+if (-d $target_dir) {
+    print "✅ Directory '$target_dir' exists!\n";
+} else {
+    print "❌ Directory '$target_dir' does NOT exist!\n";
+    system("mkdir $target_dir");
+}
+
+#Get pwd via cwd
+my $current_dir = $build_base; # Stores the current directory
+my $status = system("bash -c 'dpkg -s python3-venv >/dev/null 2>&1'");
+$current_dir .= "/zephyrproject";
+
+# Start navigation from 'zephyrproject'
+chdir("zephyrproject") or die "Failed to enter 'zephyrproject': $!\n";
+system("bash -c '
+python3 -m venv $current_dir/.venv &&
+pwd &&
+source $current_dir/.venv/bin/activate &&
+deactivate'");
+
+# Store final directory choice
+my $src_dir = navigate_directory(); #Correct directory of source code.
+my $zephyr_dir = $current_dir;
+$zephyr_dir .= '/zephyr';
+
+system("bash -c '
+source $current_dir/.venv/bin/activate &&
+cd  $current_dir &&
+pip install west &&
+if [ -d .west ]; then echo \"Workspace already initialized.\"; else west init && west update; fi &&
+west update &&
+west zephyr-export &&
+west packages pip --install &&
+cd $zephyr_dir &&
+west sdk install &&
+west build -p always -b nrf7002dk/nrf5340/cpuapp --source-dir $src_dir --build-dir $current_dir/zephyr/build &&
+deactivate'") == 0
+or die "Could not update west, virtual environment eactivated: $!"
+system("echo 'Virtual environment deactivated'");
+
+# Move up one directory level
+chdir $build_base or die "Failed to change directory: $!";
+my $script_path = 'flash-file';
+
+# Run flash-file in order to flash to selected device
+system("perl $script_path")==0
+    or die "Failed to run flash-file $script_path: $!";
+exit 0;
