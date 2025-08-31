@@ -1,21 +1,25 @@
 # zephyr-base Dockerfile
 FROM ubuntu:22.04
 
-COPY /home/aharfuch/src/Zephyr-container/zephcont /app/zephcont
-COPY /home/aharfuch/Kernergetiks/Projects/Humidity-control1/build-file /app/build-file
-COPY /home/aharfuch/Kernergetiks/Projects/Humidity-control1/flash-file /app/flash-file
-
+# Avoid interactive prompts during build
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
-    apt-get install -y python3 python3 python3-venv python3-pip git cmake ninja-build gperf \
-    # ... add Zephyr dependencies ...
-    && pip3 install west apt install vim
+    apt-get install -y python3 python3-venv python3-pip git cmake ninja-build gperf curl #&& pip3 install west apt
+RUN exit 0;
+
+RUN perl -e 'print "Enter your name: "; $name = <STDIN>; chomp($name); print "Hello, $name!\n";'
 
 # Install Zephyr (example)
-RUN west init zephyrproject && \
-    cd zephyrproject && \
-    west update && \
-    west zephyr-export
+#RUN python3 -m venv ~/zephyrproject/.venv && west init zephyrproject && \
+#    cd zephyrproject && \
+#    west update && \
+#    west zephyr-export
+
+
+COPY zephcont ~/zephcont
+COPY build-file ~/build-file
+COPY flash-file ~/flash-file
 
 
 # Set up environment variables (if needed)
-ENV ZEPHYR_BASE=/zephyrproject/zephyr
+ENV ZEPHYR_BASE=~/zephyrproject/zephyr
