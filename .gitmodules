@@ -1,3 +1,0 @@
-[submodule "humidity-control"]
-	path = humidity-control
-	url = git@github.com:harfuchcardenas/humidity-control.git
