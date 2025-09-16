@@ -4,6 +4,7 @@ ENV DEBIAN_FRONTEND=interactive
 
 RUN apt-get update && apt-get install -y \
     perl \
+    unzip \
     git \
     vim \
     openssh-client
