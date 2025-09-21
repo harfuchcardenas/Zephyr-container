@@ -5,11 +5,11 @@ ENV DEBIAN_FRONTEND=interactive
 RUN mkdir -p /app
 
 RUN apt-get update && apt-get install -y \
-    xz-utils
+    xz-utils \
+    perl
 
 RUN apt update && apt install -y \
     zip \
-    perl-base \
     vim \
     nano \
     openssh-client \
@@ -33,11 +33,12 @@ RUN apt update && apt install -y \
     libsdl2-dev \
     libmagic1
 
-RUN curl -o /app/build-file https://raw.githubusercontent.com/harfuchcardenas/zephyr_build/master/build-file
+RUN curl -o /home/zephyr-build https://raw.githubusercontent.com/harfuchcardenas/eforum/master/zephyr-build
+
+RUN chmod +x /home/zephyr-build
 
 RUN cmake --version && python3 --version && dtc --version || (echo "❌ Command failed. Exiting..." && exit 1)
 
 WORKDIR /app
 
 
-RUN chmod +x build-file
