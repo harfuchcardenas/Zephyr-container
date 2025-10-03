@@ -1,3 +1,0 @@
-[submodule "zephyr_build"]
-	path = zephyr_build
-	url = https://github.com/harfuchcardenas/zephyr_build.git
